@@ -1,0 +1,45 @@
+module.exports = {
+    name: "adminlist",
+    aliases: ["admin", "listadmin"],
+    description: "Menampilkan daftar admin grup beserta ID mereka",
+    cooldown: 5,
+    execute: async function (api, event, args) {
+        try {
+            // Dapatkan info thread/grup
+            const threadInfo = await new Promise((resolve, reject) => {
+                api.getThreadInfo(event.threadID, (err, info) => {
+                    if (err) reject(err);
+                    else resolve(info);
+                });
+            });
+
+            // Dapatkan daftar admin
+            const adminList = threadInfo.adminIDs;
+            
+            // Dapatkan info detail setiap admin
+            const adminDetails = await Promise.all(
+                adminList.map(async (admin) => {
+                    return new Promise((resolve) => {
+                        api.getUserInfo(admin.id, (err, info) => {
+                            if (err) {
+                                resolve(`ID: ${admin.id} (Tidak dapat mengambil nama)`);
+                            } else {
+                                resolve(`👤 ${info[admin.id].name}\n💳 ID: ${admin.id}`);
+                            }
+                        });
+                    });
+                })
+            );
+
+            // Buat pesan
+            const message = `📑 Daftar Admin Grup:\n\n${adminDetails.join("\n\n")}`;
+            
+            // Kirim pesan
+            api.sendMessage(message, event.threadID, event.messageID);
+
+        } catch (error) {
+            console.error("Error in adminlist command:", error);
+            api.sendMessage("❌ Terjadi kesalahan saat mengambil daftar admin", event.threadID, event.messageID);
+        }
+    }
+}; 
